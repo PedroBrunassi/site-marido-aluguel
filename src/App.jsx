@@ -19,6 +19,48 @@ function WhatsAppIcon({ size = 18 }) {
 
 const WA_LINK = 'https://wa.me/5543999446630?text=Olá!%20Vim%20pelo%20site%20e%20preciso%20de%20um%20serviço.'
 
+/* ── Gear teeth path helper ────────────────────────────── */
+function gearPath(outerR, innerR, numTeeth) {
+  const pts = []
+  const step = (2 * Math.PI) / numTeeth
+  for (let i = 0; i < numTeeth; i++) {
+    const a = i * step - Math.PI / 2
+    pts.push([innerR * Math.cos(a - step * 0.22), innerR * Math.sin(a - step * 0.22)])
+    pts.push([outerR * Math.cos(a - step * 0.13), outerR * Math.sin(a - step * 0.13)])
+    pts.push([outerR * Math.cos(a + step * 0.13), outerR * Math.sin(a + step * 0.13)])
+    pts.push([innerR * Math.cos(a + step * 0.22), innerR * Math.sin(a + step * 0.22)])
+  }
+  return 'M ' + pts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' L ') + ' Z'
+}
+
+/* ── Magnetic effect (GSAP elastic) ───────────────────── */
+function useMagneticEffect() {
+  useEffect(() => {
+    if (window.matchMedia('(hover: none)').matches) return
+    const els = [...document.querySelectorAll('.btn-magnetic')]
+    const onMove = (e) => {
+      const el = e.currentTarget
+      const r = el.getBoundingClientRect()
+      const x = (e.clientX - r.left - r.width / 2) * 0.28
+      const y = (e.clientY - r.top - r.height / 2) * 0.28
+      gsap.to(el, { x, y, scale: 1.04, duration: 0.35, ease: 'power2.out', overwrite: true })
+    }
+    const onLeave = (e) => {
+      gsap.to(e.currentTarget, { x: 0, y: 0, scale: 1, duration: 0.85, ease: 'elastic.out(1, 0.38)', overwrite: true })
+    }
+    els.forEach(el => {
+      el.addEventListener('mousemove', onMove)
+      el.addEventListener('mouseleave', onLeave)
+    })
+    return () => {
+      els.forEach(el => {
+        el.removeEventListener('mousemove', onMove)
+        el.removeEventListener('mouseleave', onLeave)
+      })
+    }
+  }, [])
+}
+
 /* ═══════════════════════════════════════════════════════════
    NAVBAR
 ════════════════════════════════════════════════════════════ */
@@ -144,8 +186,12 @@ function Hero() {
     const ctx = gsap.context(() => {
       gsap.fromTo(
         '.hero-anim',
-        { y: 44, opacity: 0 },
-        { y: 0, opacity: 1, duration: 1.15, stagger: 0.11, ease: 'power3.out', delay: 0.25 }
+        { y: 56, opacity: 0, scale: 0.96 },
+        {
+          y: 0, opacity: 1, scale: 1,
+          duration: 1.3, stagger: 0.13, ease: 'power4.out', delay: 0.2,
+          clearProps: 'scale',
+        }
       )
     }, heroRef)
     return () => ctx.revert()
@@ -393,11 +439,13 @@ function TypewriterCard() {
       </div>
 
       <div
-        className="rounded-2xl px-4 py-4 text-sm min-h-[72px] flex items-start"
+        className="rounded-2xl px-4 py-4 text-sm flex items-start"
         style={{
           background: 'rgba(0,0,0,0.25)',
           fontFamily: 'IBM Plex Mono, monospace',
           color: '#86efac',
+          height: '88px',       /* fixed — prevents layout reflow when text grows */
+          overflow: 'hidden',
         }}
       >
         <span>{displayed}</span>
@@ -540,7 +588,7 @@ function Features() {
   }, [])
 
   return (
-    <section ref={ref} id="serviços" className="py-28 px-6 md:px-16 bg-[#F2F0E9]">
+    <section ref={ref} id="diferenciais" className="py-28 px-6 md:px-16 bg-[#F2F0E9]">
       <div className="max-w-7xl mx-auto">
         <div className="mb-14">
           <span
@@ -658,81 +706,99 @@ function Philosophy() {
 /* ═══════════════════════════════════════════════════════════
    PROTOCOL — Sticky Stacking
 ════════════════════════════════════════════════════════════ */
+/* CSS gear styles — applied inline so they scope to the SVG elements.
+   transform-box:fill-box + transform-origin:center ensures the rotation
+   is around each gear's own center regardless of SVG viewport.
+   CSS animations run on the compositor thread (unlike SMIL animateTransform). */
+const gearCW  = { animation: 'gear-cw 9s linear infinite',   transformBox: 'fill-box', transformOrigin: 'center', willChange: 'transform' }
+const gearCCW = { animation: 'gear-ccw 5.4s linear infinite', transformBox: 'fill-box', transformOrigin: 'center', willChange: 'transform' }
+
 function GearsAnim() {
+  const bigPath   = gearPath(26, 17, 10)
+  const smallPath = gearPath(14, 10, 6)
+
   return (
-    <svg viewBox="0 0 120 120" className="w-32 h-32" aria-hidden="true">
-      <g transform="translate(60,60)">
-        <circle r="22" fill="none" stroke="#CC5833" strokeWidth="3.5" strokeDasharray="5 5">
-          <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="9s" repeatCount="indefinite" />
-        </circle>
-        <circle r="13" fill="none" stroke="rgba(204,88,51,0.45)" strokeWidth="2.5" strokeDasharray="3 4">
-          <animateTransform attributeName="transform" type="rotate" from="360" to="0" dur="5.5s" repeatCount="indefinite" />
-        </circle>
-        <circle r="4" fill="#CC5833" />
+    <svg viewBox="-55 -55 110 110" className="w-36 h-36" aria-hidden="true">
+      <defs>
+        <radialGradient id="gearGlow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%"   stopColor="#CC5833" stopOpacity="0.18" />
+          <stop offset="100%" stopColor="#CC5833" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      <circle r="36" fill="url(#gearGlow)" />
+      {/* Big gear — CSS CW rotation (compositor thread) */}
+      <g style={gearCW}>
+        <path d={bigPath} fill="rgba(204,88,51,0.1)" stroke="#CC5833" strokeWidth="1.5" strokeLinejoin="round" />
+        <circle r="7"   fill="none" stroke="#CC5833" strokeWidth="1.5" strokeDasharray="2 3" />
+        <circle r="3.5" fill="#CC5833" />
       </g>
-      <g transform="translate(28,28)">
-        <circle r="13" fill="none" stroke="#2E4036" strokeWidth="2.5" strokeDasharray="3 3">
-          <animateTransform attributeName="transform" type="rotate" from="360" to="0" dur="7s" repeatCount="indefinite" />
-        </circle>
-        <circle r="3" fill="#2E4036" />
+      <circle cx="-16.9" cy="-16.9" r="1.5" fill="rgba(46,64,54,0.25)" />
+      {/* Small gear — CSS CCW rotation (compositor thread) */}
+      <g transform="translate(-24,-24)">
+        <g style={gearCCW}>
+          <path d={smallPath} fill="rgba(46,64,54,0.1)" stroke="#2E4036" strokeWidth="1.5" strokeLinejoin="round" />
+          <circle r="4.5" fill="none" stroke="#2E4036" strokeWidth="1.5" strokeDasharray="2 3" />
+          <circle r="2"   fill="#2E4036" />
+        </g>
       </g>
     </svg>
   )
 }
 
 function ScanAnim() {
+  /*
+   * Zero per-dot animations.
+   * A moving SVG <mask> illuminates the circles as the beam sweeps —
+   * identical visual result, only 2 animateMotion (translate) in the
+   * whole component instead of 120 SMIL attribute animations.
+   *
+   * animateMotion (translation) is GPU-composited in all modern browsers.
+   * SMIL `animate` on `r` (geometry) and `opacity` runs on the main
+   * thread and was the primary source of scroll jank.
+   */
   return (
     <svg viewBox="0 0 140 90" className="w-36 h-24" aria-hidden="true">
       <defs>
-        <linearGradient id="lg1" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor="#CC5833" stopOpacity="0" />
-          <stop offset="50%" stopColor="#CC5833" stopOpacity="1" />
+        {/* Mask gradient: bright strip, dim everywhere else */}
+        <linearGradient id="scanMaskGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%"   stopColor="white" stopOpacity="0.1" />
+          <stop offset="28%"  stopColor="white" stopOpacity="1" />
+          <stop offset="72%"  stopColor="white" stopOpacity="1" />
+          <stop offset="100%" stopColor="white" stopOpacity="0.1" />
+        </linearGradient>
+        {/* Mask: base dim layer + moving bright strip (synced with beam) */}
+        <mask id="scanMask">
+          <rect width="140" height="90" fill="white" opacity="0.18" />
+          <rect x="0" y="-25" width="140" height="50" fill="url(#scanMaskGrad)">
+            <animateMotion dur="2.4s" repeatCount="indefinite" path="M0,8 L0,83" calcMode="linear" />
+          </rect>
+        </mask>
+        {/* Scan beam */}
+        <linearGradient id="scanBeamGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%"   stopColor="#CC5833" stopOpacity="0" />
+          <stop offset="40%"  stopColor="#CC5833" stopOpacity="0.9" />
+          <stop offset="60%"  stopColor="#CC5833" stopOpacity="0.9" />
           <stop offset="100%" stopColor="#CC5833" stopOpacity="0" />
         </linearGradient>
       </defs>
-      {Array.from({ length: 6 }).map((_, r) =>
-        Array.from({ length: 10 }).map((_, c) => (
-          <circle
-            key={`${r}-${c}`}
-            cx={7 + c * 14}
-            cy={8 + r * 15}
-            r="1.8"
-            fill="#2E4036"
-            opacity="0.35"
-          />
-        ))
-      )}
-      <rect x="0" y="0" width="140" height="3.5" fill="url(#lg1)" rx="2">
-        <animateMotion dur="2.2s" repeatCount="indefinite" path="M0,8 L0,82" calcMode="linear" />
+
+      {/* Static dots — lighting comes from the mask above */}
+      <g mask="url(#scanMask)">
+        {Array.from({ length: 6 }).map((_, r) =>
+          Array.from({ length: 10 }).map((_, c) => (
+            <circle key={`${r}-${c}`} cx={7 + c * 14} cy={8 + r * 15} r="1.8" fill="#CC5833" />
+          ))
+        )}
+      </g>
+
+      {/* Beam overlay */}
+      <rect x="0" y="-8" width="140" height="16" fill="url(#scanBeamGrad)" rx="2" opacity="0.7">
+        <animateMotion dur="2.4s" repeatCount="indefinite" path="M0,8 L0,83" calcMode="linear" />
       </rect>
     </svg>
   )
 }
 
-function WaveAnim() {
-  return (
-    <svg viewBox="0 0 180 60" className="w-44 h-16" aria-hidden="true">
-      <path
-        d="M0,30 C25,5 50,5 75,30 S125,55 150,30 S170,5 180,30"
-        fill="none"
-        stroke="#CC5833"
-        strokeWidth="3"
-        strokeLinecap="round"
-        strokeDasharray="340"
-        strokeDashoffset="340"
-      >
-        <animate attributeName="stroke-dashoffset" from="340" to="0" dur="2s" repeatCount="indefinite" />
-      </path>
-      <path
-        d="M0,30 C25,5 50,5 75,30 S125,55 150,30 S170,5 180,30"
-        fill="none"
-        stroke="rgba(204,88,51,0.2)"
-        strokeWidth="3"
-        strokeLinecap="round"
-      />
-    </svg>
-  )
-}
 
 const protocolSteps = [
   {
@@ -752,51 +818,10 @@ const protocolSteps = [
 ]
 
 function Protocol() {
-  const wrapRef = useRef(null)
-  const cardsRef = useRef([])
-
-  useEffect(() => {
-    const ctx = gsap.context(() => {
-      cardsRef.current.forEach((card, i) => {
-        if (!card) return
-        if (i < protocolSteps.length - 1) {
-          ScrollTrigger.create({
-            trigger: card,
-            start: 'top top',
-            end: () => `+=${window.innerHeight * 1.1}`,
-            pin: true,
-            pinSpacing: i < protocolSteps.length - 2 ? false : true,
-            anticipatePin: 1,
-          })
-        }
-
-        // Next card appears → previous scales down
-        if (i > 0) {
-          gsap.fromTo(
-            cardsRef.current[i - 1],
-            { scale: 1, filter: 'blur(0px)', opacity: 1 },
-            {
-              scale: 0.9,
-              filter: 'blur(14px)',
-              opacity: 0.45,
-              ease: 'power2.inOut',
-              scrollTrigger: {
-                trigger: card,
-                start: 'top 90%',
-                end: 'top top',
-                scrub: true,
-              },
-            }
-          )
-        }
-      })
-    }, wrapRef)
-    return () => ctx.revert()
-  }, [])
-
   return (
-    <section ref={wrapRef} id="como-funciona" className="bg-[#F2F0E9]">
-      <div className="max-w-7xl mx-auto px-6 md:px-16 pt-28 pb-8">
+    <section id="como-funciona" className="bg-[#F2F0E9]">
+      {/* Section header */}
+      <div className="max-w-7xl mx-auto px-6 md:px-16 pt-28 pb-10">
         <span
           className="text-[#CC5833] text-xs tracking-widest uppercase"
           style={{ fontFamily: 'IBM Plex Mono, monospace' }}
@@ -811,65 +836,69 @@ function Protocol() {
         </h2>
       </div>
 
-      {protocolSteps.map((step, i) => (
-        <div
-          key={i}
-          ref={el => (cardsRef.current[i] = el)}
-          className="min-h-screen flex items-center px-6 md:px-16 py-20 bg-[#F2F0E9]"
-          style={{ willChange: 'transform, filter, opacity' }}
-        >
-          <div className="max-w-7xl mx-auto w-full grid grid-cols-1 md:grid-cols-2 gap-14 md:gap-20 items-center">
-            <div>
-              <span
-                className="inline-block text-xs text-[#CC5833] bg-[#CC5833]/10 px-3 py-1.5 rounded-full font-mono mb-4 -mt-4"
-                style={{ fontFamily: 'IBM Plex Mono, monospace' }}
-              >
-                {step.tag}
-              </span>
-              <h3
-                className="text-4xl md:text-6xl font-bold text-[#2E4036] leading-tight"
-                style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}
-              >
-                {step.title}
-              </h3>
-              <p
-                className="text-[#1A1A1A]/58 text-lg mt-5 leading-relaxed max-w-md"
-                style={{ fontFamily: 'Outfit, sans-serif' }}
-              >
-                {step.desc}
-              </p>
-              {i === protocolSteps.length - 1 && (
-                <a
-                  href={WA_LINK}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 mt-8 bg-[#CC5833] text-white font-semibold px-7 py-3.5 rounded-full relative overflow-hidden group btn-magnetic"
-                  style={{ fontFamily: 'Outfit, sans-serif' }}
-                >
-                  <span className="relative z-10 flex items-center gap-2">
-                    <WhatsAppIcon size={17} /> Começar agora
+      {/*
+        Pure CSS `position: sticky` stack — handled entirely by the browser
+        compositor. Zero scroll listeners, zero JS per frame: cannot jank.
+      */}
+      <div className="sticky-stack px-6 md:px-16">
+        {protocolSteps.map((step, i) => (
+          <div key={i} className="sticky-card" style={{ '--i': i, zIndex: i + 1 }}>
+            <div className="protocol-stack-item">
+              <div className="w-full px-8 md:px-14 py-14 grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-20 items-center max-w-7xl mx-auto">
+                {/* Text side */}
+                <div>
+                  <span
+                    className="inline-block text-xs text-[#CC5833] bg-[#CC5833]/10 px-3 py-1.5 rounded-full mb-5"
+                    style={{ fontFamily: 'IBM Plex Mono, monospace' }}
+                  >
+                    {step.tag}
                   </span>
-                  <span className="absolute inset-0 bg-[#b84a28] translate-y-full group-hover:translate-y-0 transition-transform duration-300 rounded-full" />
-                </a>
-              )}
-            </div>
+                  <h3
+                    className="text-4xl md:text-6xl font-bold text-[#2E4036] leading-tight"
+                    style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}
+                  >
+                    {step.title}
+                  </h3>
+                  <p
+                    className="text-[#1A1A1A]/58 text-lg mt-5 leading-relaxed max-w-md"
+                    style={{ fontFamily: 'Outfit, sans-serif' }}
+                  >
+                    {step.desc}
+                  </p>
+                  {i === protocolSteps.length - 1 && (
+                    <a
+                      href={WA_LINK}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 mt-8 bg-[#CC5833] text-white font-semibold px-7 py-3.5 rounded-full relative overflow-hidden group btn-magnetic"
+                      style={{ fontFamily: 'Outfit, sans-serif' }}
+                    >
+                      <span className="relative z-10 flex items-center gap-2">
+                        <WhatsAppIcon size={17} /> Começar agora
+                      </span>
+                      <span className="absolute inset-0 bg-[#b84a28] translate-y-full group-hover:translate-y-0 transition-transform duration-300 rounded-full" />
+                    </a>
+                  )}
+                </div>
 
-            <div className="flex justify-center">
-              <div
-                className="w-60 h-60 md:w-72 md:h-72 rounded-[3rem] bg-white flex items-center justify-center"
-                style={{
-                  border: '1px solid rgba(46,64,54,0.1)',
-                  boxShadow: '0 20px 60px rgba(46,64,54,0.12)',
-                }}
-              >
-                {step.anim === 'gears' && <GearsAnim />}
-                {step.anim === 'scan' && <ScanAnim />}
-                {step.anim === 'wave' && <WaveAnim />}
+                {/* Animation side */}
+                <div className="flex justify-center">
+                  <div
+                    className="w-60 h-60 md:w-72 md:h-72 rounded-[3rem] bg-white flex items-center justify-center"
+                    style={{
+                      border: '1px solid rgba(46,64,54,0.1)',
+                      boxShadow: '0 20px 60px rgba(46,64,54,0.12)',
+                    }}
+                  >
+                    {step.anim === 'gears' && <GearsAnim />}
+                    {step.anim === 'scan' && <ScanAnim />}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </section>
   )
 }
@@ -904,7 +933,7 @@ function Services() {
   }, [])
 
   return (
-    <section ref={ref} id="serviços-completos" className="py-28 px-6 md:px-16 bg-[#2E4036]">
+    <section ref={ref} id="serviços" className="py-28 px-6 md:px-16 bg-[#2E4036]">
       <div className="max-w-7xl mx-auto">
         <div className="mb-14">
           <span
@@ -1107,7 +1136,7 @@ const faqs = [
   },
   {
     q: 'Quais formas de pagamento são aceitas?',
-    a: 'Aceitamos PIX, dinheiro, cartão de débito e crédito (parcelamento em até 6x sem juros em planos mensais).',
+    a: 'Aceitamos PIX, dinheiro, cartão de débito e crédito.',
   },
 ]
 
@@ -1155,16 +1184,17 @@ function FAQ() {
                   style={{ transform: open === i ? 'rotate(180deg)' : 'rotate(0deg)' }}
                 />
               </button>
-              {open === i && (
-                <div className="px-6 pb-5">
-                  <p
-                    className="text-[#1A1A1A]/62 text-sm leading-relaxed"
-                    style={{ fontFamily: 'Outfit, sans-serif' }}
-                  >
-                    {faq.a}
-                  </p>
-                </div>
-              )}
+              <div
+                className="faq-body"
+                style={{ maxHeight: open === i ? '240px' : '0' }}
+              >
+                <p
+                  className="px-6 pt-1 pb-5 text-[#1A1A1A]/62 text-sm leading-relaxed"
+                  style={{ fontFamily: 'Outfit, sans-serif' }}
+                >
+                  {faq.a}
+                </p>
+              </div>
             </div>
           ))}
         </div>
@@ -1399,6 +1429,8 @@ function FloatingWA() {
    APP ROOT
 ════════════════════════════════════════════════════════════ */
 export default function App() {
+  useMagneticEffect()
+
   return (
     <>
       <Navbar />
