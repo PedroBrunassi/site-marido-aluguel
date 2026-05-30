@@ -1260,14 +1260,19 @@ function CTABanner() {
           href={WA_LINK}
           target="_blank"
           rel="noopener noreferrer"
-          className="cta-content inline-flex items-center gap-2.5 mt-8 bg-white text-[#CC5833] font-bold px-9 py-4 rounded-full relative overflow-hidden group btn-magnetic"
-          style={{ fontFamily: 'Outfit, sans-serif', fontSize: '1rem' }}
+          className="cta-content inline-flex items-center gap-2.5 mt-8 text-[#CC5833] font-bold px-9 py-4 rounded-full relative overflow-hidden group btn-magnetic"
+          style={{
+            fontFamily: 'Outfit, sans-serif',
+            fontSize: '1rem',
+            background: '#FFFFFF',
+            boxShadow: '0 10px 34px rgba(0,0,0,0.2)',
+          }}
         >
           <span className="relative z-10 flex items-center gap-2">
             <WhatsAppIcon size={19} />
             Falar no WhatsApp agora
           </span>
-          <span className="absolute inset-0 bg-[#F2F0E9] translate-y-full group-hover:translate-y-0 transition-transform duration-300 rounded-full" />
+          <span className="absolute inset-0 bg-white translate-y-full group-hover:translate-y-0 transition-transform duration-300 rounded-full" />
         </a>
       </div>
     </section>
