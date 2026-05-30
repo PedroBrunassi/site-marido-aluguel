@@ -1272,7 +1272,7 @@ function CTABanner() {
             <WhatsAppIcon size={19} />
             Falar no WhatsApp agora
           </span>
-          <span className="absolute inset-0 bg-white translate-y-full group-hover:translate-y-0 transition-transform duration-300 rounded-full" />
+          <span className="absolute inset-0 bg-[#F2F0E9] translate-y-full group-hover:translate-y-0 transition-transform duration-300 rounded-full" />
         </a>
       </div>
     </section>
